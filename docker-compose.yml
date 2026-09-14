@@ -1,0 +1,17 @@
+services:
+  nano-ipam:
+    build: .
+    container_name: nano-ipam
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ipam_data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATA_PATH=/app/data/ipam.db
+
+volumes:
+  ipam_data:

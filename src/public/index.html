@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>nano-ipam | Proxmox & Homelab IP Management</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/></svg>">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+          <line x1="6" y1="6" x2="6.01" y2="6"></line>
+          <line x1="6" y1="18" x2="6.01" y2="18"></line>
+        </svg>
+        <div>
+          <span class="logo-title">nano-ipam</span>
+          <span class="logo-badge">LXC Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="search-container">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="global-search" placeholder="Search IP, Hostname, MAC, Subnet... (/)" autocomplete="off">
+        <div id="search-dropdown" class="search-dropdown hidden"></div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="btn btn-primary" id="btn-open-create-subnet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        New Subnet
+      </button>
+      <button class="btn btn-secondary" id="btn-export-data" title="Export IPAM Database JSON">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Export
+      </button>
+      <button class="icon-btn theme-toggle" id="theme-toggle" title="Toggle Light/Dark Theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- Stat Cards Overview -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-title">Subnets Managed</div>
+        <div class="stat-value" id="stat-subnets">0</div>
+        <div class="stat-desc">Configured network segments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Allocated IPs</div>
+        <div class="stat-value" id="stat-allocated">0</div>
+        <div class="stat-desc"><span id="stat-reserved">0</span> reserved / static</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Available Usable IPs</div>
+        <div class="stat-value text-success" id="stat-available">0</div>
+        <div class="stat-desc">Ready for allocation</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Overall Utilization</div>
+        <div class="stat-value" id="stat-utilization">0%</div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="stat-utilization-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Subnet Explorer View (Default) -->
+    <section id="view-subnets" class="view-section">
+      <div class="section-toolbar">
+        <div class="toolbar-left">
+          <h2>Subnet Directory</h2>
+          <span class="badge badge-neutral" id="subnet-count-badge">0 Subnets</span>
+        </div>
+        <div class="toolbar-right">
+          <input type="text" id="subnet-filter-input" class="input-sm" placeholder="Filter subnets...">
+        </div>
+      </div>
+
+      <div id="subnets-grid" class="subnets-grid">
+        <!-- Subnet cards rendered dynamically -->
+      </div>
+      <div id="subnets-empty" class="empty-state hidden">
+        <div class="empty-icon">🌐</div>
+        <h3>No subnets created yet</h3>
+        <p>Get started by creating your first network subnet block (e.g. 192.168.1.0/24 or 10.0.0.0/24).</p>
+        <button class="btn btn-primary" id="btn-empty-create-subnet">Create First Subnet</button>
+      </div>
+    </section>
+
+    <!-- Subnet Detail View -->
+    <section id="view-subnet-detail" class="view-section hidden">
+      <div class="detail-header">
+        <button class="btn btn-ghost" id="btn-back-to-subnets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          All Subnets
+        </button>
+        <div class="detail-title-group">
+          <h1 id="detail-subnet-name">Subnet Name</h1>
+          <span class="cidr-badge" id="detail-subnet-cidr">10.0.0.0/24</span>
+          <span class="vlan-badge hidden" id="detail-subnet-vlan">VLAN 10</span>
+          <span class="site-badge hidden" id="detail-subnet-site">Homelab</span>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-success" id="btn-quick-allocate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+            Allocate Next IP (<span id="quick-next-ip">...</span>)
+          </button>
+          <button class="btn btn-secondary" id="btn-manual-allocate">
+            + Manual IP
+          </button>
+          <button class="btn btn-ghost" id="btn-edit-current-subnet" title="Edit Subnet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button class="btn btn-ghost text-danger" id="btn-delete-current-subnet" title="Delete Subnet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Network Details Summary Bar -->
+      <div class="network-summary-bar">
+        <div class="summary-item">
+          <span class="summary-label">Gateway</span>
+          <span class="summary-value" id="detail-gateway">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Usable Range</span>
+          <span class="summary-value" id="detail-range">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Netmask</span>
+          <span class="summary-value" id="detail-netmask">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Broadcast</span>
+          <span class="summary-value" id="detail-broadcast">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">DNS Servers</span>
+          <span class="summary-value" id="detail-dns">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Utilization</span>
+          <span class="summary-value" id="detail-utilization-text">0%</span>
+        </div>
+      </div>
+
+      <!-- Allocations Table Section -->
+      <div class="allocations-section">
+        <div class="allocations-toolbar">
+          <div class="toolbar-left">
+            <h3>Allocated Addresses</h3>
+            <span class="badge badge-neutral" id="allocation-count-badge">0 IPs</span>
+          </div>
+          <div class="toolbar-right">
+            <select id="allocation-status-filter" class="select-sm">
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="reserved">Reserved</option>
+              <option value="dhcp">DHCP</option>
+              <option value="deprecated">Deprecated</option>
+            </select>
+            <input type="text" id="allocation-filter-input" class="input-sm" placeholder="Filter IPs, hostnames...">
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="allocations-table">
+            <thead>
+              <tr>
+                <th>IP Address</th>
+                <th>Status</th>
+                <th>Device / Type</th>
+                <th>Hostname</th>
+                <th>MAC Address</th>
+                <th>Owner / Description</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="allocations-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Create / Edit Subnet Modal -->
+  <div id="modal-subnet" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-subnet-title">Create Subnet</h3>
+        <button class="btn-close" id="btn-close-subnet-modal">&times;</button>
+      </div>
+      <form id="form-subnet">
+        <input type="hidden" id="subnet-id">
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="subnet-name">Subnet Name <span class="required">*</span></label>
+            <input type="text" id="subnet-name" required placeholder="e.g. Proxmox LXC Network">
+          </div>
+          <div class="form-group flex-1">
+            <label for="subnet-vlan">VLAN ID</label>
+            <input type="number" id="subnet-vlan" min="1" max="4094" placeholder="e.g. 20">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="subnet-cidr">CIDR Network Address <span class="required">*</span></label>
+          <input type="text" id="subnet-cidr" required placeholder="e.g. 10.10.20.0/24">
+          <div id="cidr-preview" class="cidr-calc-preview hidden">
+            <!-- Dynamic CIDR calculation preview -->
+          </div>
+          <div id="cidr-error" class="alert-error hidden"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="subnet-gateway">Default Gateway</label>
+            <input type="text" id="subnet-gateway" placeholder="e.g. 10.10.20.1">
+          </div>
+          <div class="form-group flex-1">
+            <label for="subnet-dns">DNS Servers</label>
+            <input type="text" id="subnet-dns" placeholder="e.g. 1.1.1.1, 8.8.8.8">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="subnet-site">Site / Environment</label>
+            <input type="text" id="subnet-site" placeholder="e.g. Homelab Proxmox">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="subnet-desc">Description / Notes</label>
+          <textarea id="subnet-desc" rows="2" placeholder="Optional network segment details..."></textarea>
+        </div>
+
+        <div class="form-group checkbox-group" id="auto-gateway-group">
+          <label>
+            <input type="checkbox" id="subnet-auto-gateway" checked>
+            Automatically reserve gateway IP in allocation table
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-subnet">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-subnet">Save Subnet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Allocate / Edit IP Modal -->
+  <div id="modal-allocation" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-allocation-title">Allocate IP Address</h3>
+        <button class="btn-close" id="btn-close-allocation-modal">&times;</button>
+      </div>
+      <form id="form-allocation">
+        <input type="hidden" id="allocation-id">
+        <input type="hidden" id="allocation-subnet-id">
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="allocation-ip">IP Address <span class="required">*</span></label>
+            <div class="input-with-button">
+              <input type="text" id="allocation-ip" required placeholder="e.g. 10.10.20.50">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-autofill-next-ip" title="Use next available IP">Auto Next</button>
+            </div>
+          </div>
+          <div class="form-group flex-1">
+            <label for="allocation-status">Status</label>
+            <select id="allocation-status">
+              <option value="active">Active</option>
+              <option value="reserved">Reserved / Static</option>
+              <option value="dhcp">DHCP Pool</option>
+              <option value="deprecated">Deprecated</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="allocation-hostname">Hostname</label>
+            <input type="text" id="allocation-hostname" placeholder="e.g. pihole-lxc01">
+          </div>
+          <div class="form-group flex-1">
+            <label for="allocation-type">Device Type</label>
+            <select id="allocation-type">
+              <option value="lxc">LXC Container</option>
+              <option value="vm">Virtual Machine</option>
+              <option value="server">Physical Server</option>
+              <option value="gateway">Gateway / Router</option>
+              <option value="switch">Switch / AP</option>
+              <option value="workstation">Workstation</option>
+              <option value="iot">IoT Device</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="allocation-mac">MAC Address</label>
+            <input type="text" id="allocation-mac" placeholder="e.g. bc:24:11:92:aa:10">
+          </div>
+          <div class="form-group flex-1">
+            <label for="allocation-owner">Owner / Assignee</label>
+            <input type="text" id="allocation-owner" placeholder="e.g. Infrastructure Team">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="allocation-desc">Description / Notes</label>
+          <textarea id="allocation-desc" rows="2" placeholder="e.g. DNS resolver and ad-blocker"></textarea>
+        </div>
+
+        <div id="allocation-error" class="alert-error hidden"></div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-allocation">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-allocation">Save Allocation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

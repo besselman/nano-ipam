@@ -1,0 +1,27 @@
+[Unit]
+Description=nano-ipam - Lightweight IP Address Management Service
+Documentation=https://github.com/besselman/nano-ipam
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/nano-ipam
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=5s
+
+# Environment settings
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=0.0.0.0
+Environment=DATA_PATH=/var/lib/nano-ipam/ipam.db
+
+# Resource limits & security for LXC container
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nano-ipam
+
+[Install]
+WantedBy=multi-user.target
