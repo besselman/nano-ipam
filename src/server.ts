@@ -104,18 +104,26 @@ if (sslCertPath && sslKeyPath && fs.existsSync(sslCertPath) && fs.existsSync(ssl
 let server: http.Server | https.Server;
 const isHttps = Boolean(sslOptions);
 
+// If PORT is 443 but SSL is not active, fallback to port 3000 so it doesn't serve plain HTTP on 443
+let effectivePort = PORT;
+if (!isHttps && PORT === 443) {
+  effectivePort = 3000;
+  console.warn(`[SSL Warning] PORT is set to 443 but valid SSL certificate/key was not found.`);
+  console.warn(`[SSL Warning] Falling back to HTTP on port ${effectivePort}.`);
+}
+
 if (isHttps && sslOptions) {
   server = https.createServer(sslOptions, app);
 } else {
   server = http.createServer(app);
 }
 
-server.listen(PORT, HOST, () => {
+server.listen(effectivePort, HOST, () => {
   const protocol = isHttps ? 'https' : 'http';
   console.log(`
 ┌────────────────────────────────────────────────────────┐
 │                   Nano IPAM started                    │
-│   Listening on: ${protocol}://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}               │
+│   Listening on: ${protocol}://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${effectivePort}               │
 │   Protocol:     ${isHttps ? 'HTTPS (TLS/SSL Enabled)' : 'HTTP (Unencrypted)'}          │
 │   Certificate:  ${isHttps ? sslCertPath : 'None (Set SSL_CERT_PATH & SSL_KEY_PATH)'} │
 │   Environment:  ${process.env.NODE_ENV || 'production'}                            │
