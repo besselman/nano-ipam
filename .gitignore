@@ -11,3 +11,7 @@ data/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+certs/
+*.pem
+*.key
+*.crt
