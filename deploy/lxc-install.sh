@@ -69,11 +69,16 @@ systemctl restart nano-ipam.service
 sleep 2
 if systemctl is-active --quiet nano-ipam.service; then
   HOST_IP=$(hostname -I | awk '{print $1}')
+  if [ -f "$DATA_DIR/certs/cert.pem" ] && [ -f "$DATA_DIR/certs/key.pem" ]; then
+    URL="https://${HOST_IP}"
+  else
+    URL="http://${HOST_IP}:3000"
+  fi
   echo ""
   echo "========================================================"
-  echo "  SUCCESS! nano-ipam is installed and running!          "
+  echo "  SUCCESS! Nano IPAM is installed and running!          "
   echo "========================================================"
-  echo "  Web Interface:  http://${HOST_IP}:3000"
+  echo "  Web Interface:  ${URL}"
   echo "  Database file:  ${DATA_DIR}/ipam.db"
   echo "  Service logs:   journalctl -u nano-ipam -f"
   echo "========================================================"
