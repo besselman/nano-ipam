@@ -2,6 +2,8 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
+import http from 'node:http';
+import https from 'node:https';
 
 import subnetsRouter from './routes/subnets.js';
 import allocationsRouter from './routes/allocations.js';
@@ -61,24 +63,95 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-// Start listening
-const server = app.listen(PORT, HOST, () => {
+// Check for SSL/TLS Certificate & Private Key
+let sslCertPath = process.env.SSL_CERT_PATH;
+let sslKeyPath = process.env.SSL_KEY_PATH;
+
+if (!sslCertPath || !sslKeyPath) {
+  const searchLocations = [
+    { cert: path.join(process.cwd(), 'certs', 'cert.pem'), key: path.join(process.cwd(), 'certs', 'key.pem') },
+    { cert: path.join(process.cwd(), 'certs', 'fullchain.pem'), key: path.join(process.cwd(), 'certs', 'privkey.pem') },
+    { cert: '/var/lib/nano-ipam/certs/cert.pem', key: '/var/lib/nano-ipam/certs/key.pem' },
+    { cert: '/var/lib/nano-ipam/certs/fullchain.pem', key: '/var/lib/nano-ipam/certs/privkey.pem' },
+    { cert: '/etc/nano-ipam/certs/cert.pem', key: '/etc/nano-ipam/certs/key.pem' },
+    { cert: '/etc/nano-ipam/certs/fullchain.pem', key: '/etc/nano-ipam/certs/privkey.pem' },
+  ];
+  for (const loc of searchLocations) {
+    if (fs.existsSync(loc.cert) && fs.existsSync(loc.key)) {
+      sslCertPath = loc.cert;
+      sslKeyPath = loc.key;
+      break;
+    }
+  }
+}
+
+let sslOptions: https.ServerOptions | null = null;
+if (sslCertPath && sslKeyPath && fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
+  try {
+    sslOptions = {
+      cert: fs.readFileSync(sslCertPath),
+      key: fs.readFileSync(sslKeyPath),
+    };
+    if (process.env.SSL_CA_PATH && fs.existsSync(process.env.SSL_CA_PATH)) {
+      sslOptions.ca = fs.readFileSync(process.env.SSL_CA_PATH);
+    }
+  } catch (err: any) {
+    console.error(`[SSL Error] Failed to read SSL certificate or key: ${err.message}`);
+  }
+}
+
+// Create appropriate server (HTTPS or HTTP)
+let server: http.Server | https.Server;
+const isHttps = Boolean(sslOptions);
+
+if (isHttps && sslOptions) {
+  server = https.createServer(sslOptions, app);
+} else {
+  server = http.createServer(app);
+}
+
+server.listen(PORT, HOST, () => {
+  const protocol = isHttps ? 'https' : 'http';
   console.log(`
 ┌────────────────────────────────────────────────────────┐
-│                   nano-ipam started                    │
-│   Listening on: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}               │
+│                   Nano IPAM started                    │
+│   Listening on: ${protocol}://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}               │
+│   Protocol:     ${isHttps ? 'HTTPS (TLS/SSL Enabled)' : 'HTTP (Unencrypted)'}          │
+│   Certificate:  ${isHttps ? sslCertPath : 'None (Set SSL_CERT_PATH & SSL_KEY_PATH)'} │
 │   Environment:  ${process.env.NODE_ENV || 'production'}                            │
 │   Static files: ${publicDir}
 └────────────────────────────────────────────────────────┘
   `);
 });
 
+// Optional HTTP-to-HTTPS redirect server if running HTTPS on port 443
+let redirectServer: http.Server | null = null;
+const redirectPort = Number(process.env.HTTP_REDIRECT_PORT) || (isHttps && PORT === 443 ? 80 : null);
+if (isHttps && redirectPort) {
+  const redirectApp = express();
+  redirectApp.use((req, res) => {
+    const host = req.headers.host?.split(':')[0] || 'localhost';
+    const targetUrl = PORT === 443 ? `https://${host}${req.url}` : `https://${host}:${PORT}${req.url}`;
+    res.redirect(301, targetUrl);
+  });
+  redirectServer = redirectApp.listen(redirectPort, HOST, () => {
+    console.log(`[HTTP Redirect] Listening on http://${HOST}:${redirectPort} -> redirecting to HTTPS`);
+  });
+}
+
 // Graceful shutdown
 const shutdown = () => {
-  console.log('\nShutting down nano-ipam gracefully...');
+  console.log('\nShutting down Nano IPAM gracefully...');
   server.close(() => {
-    console.log('HTTP server closed.');
-    process.exit(0);
+    if (redirectServer) {
+      redirectServer.close(() => {
+        console.log('Redirect server closed.');
+        process.exit(0);
+      });
+    } else {
+      console.log('Server closed.');
+      process.exit(0);
+    }
   });
 };
 

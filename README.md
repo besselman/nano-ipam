@@ -1,4 +1,4 @@
-﻿# nano-ipam
+# Nano IPAM
 
 A fast, lightweight, self-hosted IP Address Management (IPAM) solution with an intuitive web dashboard and REST API. Built with **TypeScript**, **Node.js**, and zero-dependency **SQLite**, specifically optimized to run in modest resource environments like **Proxmox LXC containers** (< 50MB RAM footprint).
 
@@ -130,10 +130,72 @@ docker run -d \
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `PORT` | `3000` | Port for web server & REST API |
+| `PORT` | `3000` | Port for web server & REST API (set to `443` for standard HTTPS) |
 | `HOST` | `0.0.0.0` | Bind address (`0.0.0.0` listens on all interfaces) |
 | `DATA_PATH` | `./data/ipam.db` | Path to SQLite database file |
 | `NODE_ENV` | `production` | Environment mode (`development` or `production`) |
+| `SSL_CERT_PATH` | `None` | Path to TLS/SSL certificate (`cert.pem` or `fullchain.pem`) |
+| `SSL_KEY_PATH` | `None` | Path to TLS/SSL private key (`key.pem` or `privkey.pem`) |
+| `HTTP_REDIRECT_PORT` | `None` | If set (or if `PORT=443`), runs an HTTP redirect server on this port (e.g., `80`) |
+
+---
+
+## 🔒 HTTPS / SSL Certificate Setup
+
+Nano IPAM natively supports HTTPS (TLS/SSL). When `SSL_CERT_PATH` and `SSL_KEY_PATH` are configured, the server automatically starts in secure HTTPS mode.
+
+### Option 1: Provide Your Own Certificate Files
+If you have an existing certificate (e.g. from an internal CA, Active Directory CS, or a wildcard cert):
+1. Copy your certificate file (`cert.pem` or `fullchain.pem`) and private key (`key.pem` or `privkey.pem`) into `/var/lib/nano-ipam/certs/` (or a `./certs/` folder in the project root).
+2. Update `/etc/systemd/system/nano-ipam.service`:
+   ```ini
+   Environment=PORT=443
+   Environment=SSL_CERT_PATH=/var/lib/nano-ipam/certs/cert.pem
+   Environment=SSL_KEY_PATH=/var/lib/nano-ipam/certs/key.pem
+   Environment=HTTP_REDIRECT_PORT=80
+   ```
+3. Reload and restart:
+   ```bash
+   systemctl daemon-reload
+   systemctl restart nano-ipam
+   ```
+
+*(Nano IPAM also automatically searches `./certs/cert.pem` and `/var/lib/nano-ipam/certs/cert.pem` if the files are present).*
+
+---
+
+### Option 2: Generate a Self-Signed Certificate
+If you are running in a private homelab and want immediate encryption:
+```bash
+# Run the included helper script inside the LXC container:
+bash /opt/nano-ipam/deploy/generate-cert.sh /var/lib/nano-ipam/certs 365 ipam.local
+```
+This generates `cert.pem` and `key.pem` in `/var/lib/nano-ipam/certs/`. Nano IPAM will automatically pick them up and serve HTTPS!
+
+---
+
+### Option 3: Let's Encrypt / Certbot
+If your container has a public domain name or DNS-01 challenge configured:
+```bash
+apt-get install -y certbot
+certbot certonly --standalone -d ipam.yourdomain.com
+```
+Then configure the systemd service to point to `/etc/letsencrypt/live/ipam.yourdomain.com/fullchain.pem` and `privkey.pem`.
+
+---
+
+### Option 4: Reverse Proxy (Caddy or Nginx)
+If you prefer terminating SSL at a reverse proxy, you can keep Nano IPAM on HTTP port 3000 and let the proxy handle certificates:
+
+**Caddyfile** (Automatic HTTPS):
+```caddy
+ipam.local {
+    reverse_proxy localhost:3000
+    tls internal
+}
+```
+
+---
 
 ---
 

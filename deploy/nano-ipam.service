@@ -1,5 +1,5 @@
 [Unit]
-Description=nano-ipam - Lightweight IP Address Management Service
+Description=Nano IPAM - Lightweight IP Address Management Service
 Documentation=https://github.com/besselman/nano-ipam
 After=network.target
 
@@ -16,6 +16,12 @@ Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOST=0.0.0.0
 Environment=DATA_PATH=/var/lib/nano-ipam/ipam.db
+
+# SSL/TLS Certificate configuration (uncomment to enable native HTTPS)
+# Environment=PORT=443
+# Environment=SSL_CERT_PATH=/var/lib/nano-ipam/certs/cert.pem
+# Environment=SSL_KEY_PATH=/var/lib/nano-ipam/certs/key.pem
+# Environment=HTTP_REDIRECT_PORT=80
 
 # Resource limits & security for LXC container
 LimitNOFILE=65535
