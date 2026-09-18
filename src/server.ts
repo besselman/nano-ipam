@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
@@ -8,6 +8,7 @@ import https from 'node:https';
 import subnetsRouter from './routes/subnets.js';
 import allocationsRouter from './routes/allocations.js';
 import statsRouter from './routes/stats.js';
+import networkRouter from './routes/network.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +18,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Lightweight request logger
@@ -36,6 +37,7 @@ app.use((req, res, next) => {
 app.use('/api/subnets', subnetsRouter);
 app.use('/api/allocations', allocationsRouter);
 app.use('/api', statsRouter);
+app.use('/api/network', networkRouter);
 
 // Resolve static public directory (supports both src/public in dev and dist/public in build)
 const candidateDirs = [

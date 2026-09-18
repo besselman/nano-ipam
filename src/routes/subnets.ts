@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import db from '../db/database.js';
 import { parseCidr, subnetsOverlap, findNextAvailableIp, isValidIpv4 } from '../lib/cidr.js';
 
@@ -100,7 +100,15 @@ router.get('/:id/next-available', (req: Request, res: Response) => {
 // POST create new subnet
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { name, cidr, vlan, gateway, dns, description, site, allowOverlap, autoReserveGateway } = req.body;
+    const name = req.body.name;
+    const cidr = req.body.cidr;
+    const vlan = req.body.vlan !== undefined ? req.body.vlan : req.body.vlanId;
+    const gateway = req.body.gateway;
+    const dns = req.body.dns;
+    const description = req.body.description !== undefined ? req.body.description : req.body.desc;
+    const site = req.body.site;
+    const allowOverlap = req.body.allowOverlap !== undefined ? req.body.allowOverlap : req.body.allow_overlap;
+    const autoReserveGateway = req.body.autoReserveGateway !== undefined ? req.body.autoReserveGateway : req.body.auto_reserve_gateway;
 
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ error: 'Subnet name is required' });
@@ -177,7 +185,12 @@ router.post('/', (req: Request, res: Response) => {
 router.put('/:id', (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { name, vlan, gateway, dns, description, site } = req.body;
+    const name = req.body.name;
+    const vlan = req.body.vlan !== undefined ? req.body.vlan : req.body.vlanId;
+    const gateway = req.body.gateway;
+    const dns = req.body.dns;
+    const description = req.body.description !== undefined ? req.body.description : req.body.desc;
+    const site = req.body.site;
 
     if (gateway && !isValidIpv4(gateway)) {
       return res.status(400).json({ error: `Invalid gateway IP address: ${gateway}` });

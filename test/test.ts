@@ -1,4 +1,4 @@
-import assert from 'node:assert';
+﻿import assert from 'node:assert';
 import { parseCidr, subnetsOverlap, findNextAvailableIp, isValidIpv4, isValidMac, normalizeMac } from '../src/lib/cidr.js';
 import db from '../src/db/database.js';
 
@@ -108,4 +108,65 @@ assert.strictEqual(db.getSubnetById(testSubnet.id), undefined);
 assert.strictEqual(db.getAllocationsBySubnet(testSubnet.id).length, 0); // Cascaded delete
 console.log(`  ✔ Subnet and cascaded allocations deleted cleanly`);
 
-console.log('\n🎉 ALL 5 TEST SUITES PASSED SUCCESSFULLY!\n');
+// 6. Ping Host Utility
+console.log('\nTest 6: Native Ping & Host Inspection');
+const { pingHost } = await import('../src/lib/ping.js');
+const pingRes = await pingHost('127.0.0.1', 1500);
+assert.strictEqual(pingRes.alive, true);
+assert.ok(typeof pingRes.roundTripMs === 'number');
+console.log(`  ✔ Localhost ping successful (${pingRes.roundTripMs}ms)`);
+
+// 7. CSV Importer
+console.log('\nTest 7: CSV Parsing & Allocation Import');
+const { parseCsv, importCsvAllocations } = await import('../src/lib/importer.js');
+const csvSample = `ip,hostname,mac,status,device_type,owner
+172.16.200.5,test-lxc,00:11:22:33:44:55,active,lxc,ben
+172.16.200.6,test-vm,00-aa-bb-cc-dd-ee,reserved,vm,alice`;
+const parsedCsv = parseCsv(csvSample);
+assert.strictEqual(parsedCsv.length, 2);
+assert.strictEqual(parsedCsv[0].ip, '172.16.200.5');
+assert.strictEqual(parsedCsv[0].hostname, 'test-lxc');
+console.log('  ✔ CSV lines parsed accurately');
+
+// Create test subnet for CSV import
+const csvSubnet = db.createSubnet({
+  name: 'CSV Test Subnet',
+  cidr: '172.16.200.0/24'
+});
+const importSummary = importCsvAllocations(csvSample, csvSubnet.id);
+assert.strictEqual(importSummary.allocationsCreated, 2);
+assert.strictEqual(importSummary.errors.length, 0);
+
+const importedAlloc = db.getAllocationByIp(csvSubnet.id, '172.16.200.5');
+assert.ok(importedAlloc);
+assert.strictEqual(importedAlloc.mac, '00:11:22:33:44:55');
+db.deleteSubnet(csvSubnet.id);
+console.log('  ✔ CSV allocations imported and MAC normalized successfully');
+
+// 8. JSON Backup Import
+console.log('\nTest 8: JSON Backup Import & Mode Handling');
+const { importJsonBackup } = await import('../src/lib/importer.js');
+const jsonBackup = {
+  version: '1.0.0',
+  subnets: [
+    {
+      name: 'Imported Backup Subnet',
+      cidr: '172.16.210.0/24',
+      vlanId: 210,
+      allocations: [
+        { ipAddress: '172.16.210.20', hostname: 'backup-host', status: 'active' }
+      ]
+    }
+  ]
+};
+const jsonSummary = importJsonBackup(jsonBackup, { mode: 'merge' });
+assert.strictEqual(jsonSummary.subnetsCreated, 1);
+assert.strictEqual(jsonSummary.allocationsCreated, 1);
+
+const importedSubnet = db.getSubnetByCidr('172.16.210.0/24');
+assert.ok(importedSubnet);
+assert.strictEqual(importedSubnet.vlan, 210);
+db.deleteSubnet(importedSubnet.id);
+console.log('  ✔ JSON backup imported with camelCase aliases successfully');
+
+console.log('\n🎉 ALL 8 TEST SUITES PASSED SUCCESSFULLY!\n');

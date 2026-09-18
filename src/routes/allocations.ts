@@ -1,16 +1,70 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import db from '../db/database.js';
 import { isIpInSubnet, isValidIpv4, isValidMac, normalizeMac, findNextAvailableIp, parseCidr } from '../lib/cidr.js';
 
 const router = Router();
 
+// GET all allocations (optionally filtered by subnetId / subnet_id)
+router.get('/', (req: Request, res: Response) => {
+  try {
+    const rawSubnetId = req.query.subnet_id || req.query.subnetId;
+    if (rawSubnetId) {
+      const subnetId = Number(rawSubnetId);
+      const allocations = db.getAllocationsBySubnet(subnetId);
+      return res.json(allocations);
+    }
+
+    // Return all allocations across all subnets
+    const subnets = db.getAllSubnets();
+    const all = subnets.flatMap(s => db.getAllocationsBySubnet(s.id));
+    res.json(all);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET next-available IP for a subnet via query param
+router.get('/next-available', (req: Request, res: Response) => {
+  try {
+    const rawSubnetId = req.query.subnet_id || req.query.subnetId;
+    if (!rawSubnetId) {
+      return res.status(400).json({ error: 'subnetId or subnet_id query parameter is required' });
+    }
+
+    const subnetId = Number(rawSubnetId);
+    const subnet = db.getSubnetById(subnetId);
+    if (!subnet) {
+      return res.status(404).json({ error: 'Subnet not found' });
+    }
+
+    const allocations = db.getAllocationsBySubnet(subnetId);
+    const allocatedIps = allocations.map(a => a.ip);
+    const nextAvailableIp = findNextAvailableIp(subnet.cidr, allocatedIps, subnet.gateway || undefined);
+
+    res.json({
+      subnetId,
+      cidr: subnet.cidr,
+      nextAvailableIp,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST allocate an IP address
 router.post('/', (req: Request, res: Response) => {
   try {
-    let { subnet_id, ip, hostname, mac, device_type, status, owner, description } = req.body;
+    const subnet_id = req.body.subnet_id !== undefined ? req.body.subnet_id : req.body.subnetId;
+    let ip = req.body.ip !== undefined ? req.body.ip : req.body.ipAddress;
+    const hostname = req.body.hostname;
+    const mac = req.body.mac !== undefined ? req.body.mac : req.body.macAddress;
+    const device_type = req.body.device_type !== undefined ? req.body.device_type : req.body.deviceType;
+    const status = req.body.status;
+    const owner = req.body.owner;
+    const description = req.body.description !== undefined ? req.body.description : req.body.desc;
 
     if (!subnet_id) {
-      return res.status(400).json({ error: 'subnet_id is required' });
+      return res.status(400).json({ error: 'subnet_id or subnetId is required' });
     }
 
     const subnet = db.getSubnetById(Number(subnet_id));
@@ -19,7 +73,7 @@ router.post('/', (req: Request, res: Response) => {
     }
 
     // If IP is omitted or set to 'auto', allocate the next available IP
-    if (!ip || ip.trim().toLowerCase() === 'auto') {
+    if (!ip || String(ip).trim().toLowerCase() === 'auto') {
       const existingAllocations = db.getAllocationsBySubnet(subnet.id);
       const allocatedIps = existingAllocations.map(a => a.ip);
       const nextIp = findNextAvailableIp(subnet.cidr, allocatedIps, subnet.gateway || undefined);
@@ -91,7 +145,12 @@ router.get('/:id', (req: Request, res: Response) => {
 router.put('/:id', (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { hostname, mac, device_type, status, owner, description } = req.body;
+    const hostname = req.body.hostname;
+    const mac = req.body.mac !== undefined ? req.body.mac : req.body.macAddress;
+    const device_type = req.body.device_type !== undefined ? req.body.device_type : req.body.deviceType;
+    const status = req.body.status;
+    const owner = req.body.owner;
+    const description = req.body.description !== undefined ? req.body.description : req.body.desc;
 
     let normalizedMac: string | null | undefined = undefined;
     if (mac !== undefined) {

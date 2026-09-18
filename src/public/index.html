@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
@@ -43,6 +43,14 @@
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
         New Subnet
+      </button>
+      <button class="btn btn-secondary" id="btn-import-data" title="Import JSON or CSV Data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        Import
       </button>
       <button class="btn btn-secondary" id="btn-export-data" title="Export IPAM Database JSON">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -147,6 +155,14 @@
           </button>
           <button class="btn btn-secondary" id="btn-manual-allocate">
             + Manual IP
+          </button>
+          <button class="btn btn-secondary" id="btn-open-sweep" title="Ping sweep subnet to discover active hosts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="6"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+            Ping Sweep
           </button>
           <button class="btn btn-ghost" id="btn-edit-current-subnet" title="Edit Subnet">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -372,6 +388,156 @@
           <button type="submit" class="btn btn-primary" id="btn-save-allocation">Save Allocation</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div id="modal-import" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Import Subnets & Allocations</h3>
+        <button class="btn-close" id="btn-close-import-modal">&times;</button>
+      </div>
+      <form id="form-import">
+        <div class="tabs-header">
+          <button type="button" class="tab-btn active" id="tab-btn-json">JSON Backup</button>
+          <button type="button" class="tab-btn" id="tab-btn-csv">CSV Spreadsheet</button>
+        </div>
+
+        <div id="tab-content-json" class="tab-pane active">
+          <div class="form-group">
+            <label>Upload JSON File (or paste below)</label>
+            <input type="file" id="import-json-file" accept=".json" class="file-input">
+          </div>
+          <div class="form-group">
+            <label for="import-json-text">JSON Payload</label>
+            <textarea id="import-json-text" rows="5" placeholder='{"subnets": [{"name": "My Subnet", "cidr": "192.168.1.0/24", "allocations": [...]}]}'></textarea>
+          </div>
+          <div class="form-group">
+            <label for="import-json-mode">Import Mode</label>
+            <select id="import-json-mode">
+              <option value="merge">Merge (Add new & update existing records)</option>
+              <option value="replace">Replace All (Wipe existing data first)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="tab-content-csv" class="tab-pane hidden">
+          <div class="form-group">
+            <label>Upload CSV File (or paste below)</label>
+            <input type="file" id="import-csv-file" accept=".csv,.txt" class="file-input">
+          </div>
+          <div class="form-group">
+            <label for="import-csv-subnet">Target Subnet</label>
+            <select id="import-csv-subnet">
+              <option value="">Auto-match by IP / CIDR column</option>
+            </select>
+            <span class="field-hint">CSV headers supported: <code>ip, hostname, mac, status, device_type, owner, description</code></span>
+          </div>
+          <div class="form-group">
+            <label for="import-csv-text">CSV Content</label>
+            <textarea id="import-csv-text" rows="5" placeholder="ip,hostname,mac,status&#10;192.168.10.50,pve-node1,bc:24:11:aa:bb:cc,active"></textarea>
+          </div>
+        </div>
+
+        <div id="import-result" class="alert-info hidden"></div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-import">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-import">Start Import</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Ping Sweep Modal -->
+  <div id="modal-sweep" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-sweep-title">Subnet Ping & ARP Sweep</h3>
+          <span class="cidr-badge" id="sweep-target-badge">192.168.10.0/24</span>
+        </div>
+        <button class="btn-close" id="btn-close-sweep-modal">&times;</button>
+      </div>
+      
+      <div class="sweep-controls">
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="sweep-mode">Sweep Scope</label>
+            <select id="sweep-mode">
+              <option value="all">Full Subnet Range (All Usable IPs)</option>
+              <option value="allocated">Only Allocated IPs</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="sweep-concurrency">Concurrency</label>
+            <select id="sweep-concurrency">
+              <option value="25">Fast (25 parallel)</option>
+              <option value="10">Gentle (10 parallel)</option>
+              <option value="40">Maximum (40 parallel)</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-start-sweep">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Run Ping Sweep
+        </button>
+      </div>
+
+      <!-- Sweep Running State -->
+      <div id="sweep-loading" class="sweep-status-box hidden">
+        <div class="spinner"></div>
+        <div class="sweep-loading-text">
+          <strong>Scanning network hosts via ICMP & ARP...</strong>
+          <span id="sweep-status-desc">Sweeping IP range, please wait...</span>
+        </div>
+      </div>
+
+      <!-- Sweep Summary Stats -->
+      <div id="sweep-summary" class="sweep-summary-grid hidden">
+        <div class="stat-card">
+          <div class="stat-title">Scanned IPs</div>
+          <div class="stat-value" id="sweep-stat-scanned">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Responding Hosts</div>
+          <div class="stat-value text-success" id="sweep-stat-alive">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Unallocated Active</div>
+          <div class="stat-value text-warning" id="sweep-stat-unallocated">0</div>
+        </div>
+      </div>
+
+      <!-- Discovered Unallocated Section -->
+      <div id="sweep-unallocated-section" class="sweep-unallocated-section hidden">
+        <div class="unallocated-header">
+          <h4>⚡ Discovered Unallocated Hosts (Active on Network)</h4>
+          <span class="badge badge-warning" id="unallocated-count-badge">0 hosts</span>
+        </div>
+        <div class="table-container" style="max-height: 220px; overflow-y: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>IP Address</th>
+                <th>Latency</th>
+                <th>MAC Address (ARP)</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="sweep-unallocated-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-close-sweep-done">Done</button>
+      </div>
     </div>
   </div>
 

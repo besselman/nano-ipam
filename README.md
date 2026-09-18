@@ -22,9 +22,18 @@ A fast, lightweight, self-hosted IP Address Management (IPAM) solution with an i
 - **Zero-Config Persistence**:
   - Embedded SQLite database via Node's native storage or fallback SQLite driver.
   - Zero external database server overhead (no Postgres/MySQL daemon needed).
+- **Active Ping & ARP Sweep Engine**:
+  - Zero-dependency ICMP ping testing on individual IPs.
+  - Concurrent subnet ping sweeps with live responsive host detection.
+  - Layer-2 ARP cache lookup to detect live MAC addresses.
+  - 1-click **"Adopt Discovered Host"** flow to register rogue or unmanaged devices.
+- **Data Import & Export**:
+  - 1-click JSON database backup and migration export.
+  - Full JSON backup restore with Merge or Replace modes.
+  - CSV spreadsheet import with automatic subnet routing and MAC normalization.
 - **Ready for Proxmox LXC & Docker**:
   - Automated 1-step installer script for Debian/Ubuntu LXCs.
-  - Production-ready `systemd` service unit.
+  - Production-ready `systemd` service unit with native TLS/SSL.
   - Multi-stage `Dockerfile` and `docker-compose.yml`.
 
 ---
@@ -201,6 +210,8 @@ ipam.local {
 
 ## 🔌 REST API Reference
 
+> **Note**: API payloads flexibly accept both `camelCase` and `snake_case` keys (e.g. `subnetId` or `subnet_id`, `ipAddress` or `ip`, `vlanId` or `vlan`).
+
 ### Subnets
 - `GET /api/subnets` — List all subnets with calculated metrics (utilization %, usable hosts, free IPs).
 - `GET /api/subnets/:id` — Get single subnet details with all IP allocations.
@@ -211,13 +222,15 @@ ipam.local {
     "name": "Servers VLAN",
     "vlanId": 10,
     "gateway": "192.168.10.1",
+    "dns": "1.1.1.1, 8.8.8.8",
     "description": "DMZ Server Segment"
   }
   ```
+- `PUT /api/subnets/:id` — Update subnet details.
 - `DELETE /api/subnets/:id` — Delete subnet and its IP allocations.
 
 ### IP Allocations
-- `GET /api/allocations?subnetId=1` — List allocations for a subnet.
+- `GET /api/allocations` — List all allocations (optionally filter with `?subnetId=1`).
 - `GET /api/allocations/next-available?subnetId=1` — Get the next unused IP address in a subnet.
 - `POST /api/allocations` — Allocate or reserve an IP:
   ```json
@@ -226,11 +239,30 @@ ipam.local {
     "ipAddress": "192.168.10.25",
     "hostname": "proxmox-pve1",
     "macAddress": "bc:24:11:22:33:44",
+    "deviceType": "lxc",
     "status": "active",
     "description": "Primary Hypervisor"
   }
   ```
+- `PUT /api/allocations/:id` — Update allocation properties.
 - `DELETE /api/allocations/:id` — Release an IP allocation.
+
+### Network Ping & ARP Sweep
+- `GET /api/network/ping/:ip` — Ping a single host via native ICMP and lookup MAC from ARP cache:
+  ```json
+  { "ip": "192.168.10.25", "alive": true, "roundTripMs": 2, "mac": "bc:24:11:22:33:44" }
+  ```
+- `POST /api/network/sweep/:subnetId` — Concurrently sweep a subnet range or its allocated hosts:
+  ```json
+  { "mode": "all", "concurrency": 25 }
+  ```
+  Returns `scannedCount`, `aliveCount`, all host results, and an `unallocatedAlive` list of active devices not yet tracked in IPAM.
+
+### Data Import & Export
+- `GET /api/export` — Download full JSON backup of all subnets and IP allocations.
+- `POST /api/network/import` — Bulk import data:
+  - **JSON Backup**: `{ "format": "json", "data": { "subnets": [...] }, "mode": "merge" | "replace" }`
+  - **CSV Spreadsheet**: `{ "format": "csv", "csv": "ip,hostname,mac,status\n192.168.10.50,srv1,00:11:22:33:44:55,active", "subnetId": 1 }`
 
 ### Search & Stats
 - `GET /api/stats` — Overall statistics (total subnets, total allocated IPs, utilization %).

@@ -94,6 +94,43 @@ const elements = {
   btnCloseAllocationModal: document.getElementById('btn-close-allocation-modal'),
   btnCancelAllocation: document.getElementById('btn-cancel-allocation'),
 
+  btnOpenSweep: document.getElementById('btn-open-sweep'),
+  btnImportData: document.getElementById('btn-import-data'),
+  modalImport: document.getElementById('modal-import'),
+  formImport: document.getElementById('form-import'),
+  btnCloseImportModal: document.getElementById('btn-close-import-modal'),
+  btnCancelImport: document.getElementById('btn-cancel-import'),
+  tabBtnJson: document.getElementById('tab-btn-json'),
+  tabBtnCsv: document.getElementById('tab-btn-csv'),
+  tabContentJson: document.getElementById('tab-content-json'),
+  tabContentCsv: document.getElementById('tab-content-csv'),
+  importJsonFile: document.getElementById('import-json-file'),
+  importJsonText: document.getElementById('import-json-text'),
+  importJsonMode: document.getElementById('import-json-mode'),
+  importCsvFile: document.getElementById('import-csv-file'),
+  importCsvSubnet: document.getElementById('import-csv-subnet'),
+  importCsvText: document.getElementById('import-csv-text'),
+  importResult: document.getElementById('import-result'),
+  btnSubmitImport: document.getElementById('btn-submit-import'),
+
+  modalSweep: document.getElementById('modal-sweep'),
+  modalSweepTitle: document.getElementById('modal-sweep-title'),
+  sweepTargetBadge: document.getElementById('sweep-target-badge'),
+  btnCloseSweepModal: document.getElementById('btn-close-sweep-modal'),
+  btnCloseSweepDone: document.getElementById('btn-close-sweep-done'),
+  sweepMode: document.getElementById('sweep-mode'),
+  sweepConcurrency: document.getElementById('sweep-concurrency'),
+  btnStartSweep: document.getElementById('btn-start-sweep'),
+  sweepLoading: document.getElementById('sweep-loading'),
+  sweepStatusDesc: document.getElementById('sweep-status-desc'),
+  sweepSummary: document.getElementById('sweep-summary'),
+  sweepStatScanned: document.getElementById('sweep-stat-scanned'),
+  sweepStatAlive: document.getElementById('sweep-stat-alive'),
+  sweepStatUnallocated: document.getElementById('sweep-stat-unallocated'),
+  sweepUnallocatedSection: document.getElementById('sweep-unallocated-section'),
+  unallocatedCountBadge: document.getElementById('unallocated-count-badge'),
+  sweepUnallocatedTbody: document.getElementById('sweep-unallocated-tbody'),
+
   toastContainer: document.getElementById('toast-container'),
 };
 
@@ -302,6 +339,7 @@ function renderAllocationsTable() {
       <tr>
         <td>
           <div class="ip-cell">
+            <span class="ping-status-dot" id="ping-dot-${a.ip.replace(/\./g, '-')}" title="Click to test ping" onclick="pingSingleIp('${escapeHtml(a.ip)}')">⚪</span>
             <span>${escapeHtml(a.ip)}</span>
             <span class="copy-btn" onclick="copyToClipboard('${escapeHtml(a.ip)}')" title="Copy IP">📋</span>
           </div>
@@ -323,6 +361,9 @@ function renderAllocationsTable() {
           ${a.owner ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Owner: ${escapeHtml(a.owner)}</div>` : ''}
         </td>
         <td class="text-right">
+          <button class="btn btn-ghost btn-sm" onclick="pingSingleIp('${escapeHtml(a.ip)}')" title="Ping Host">
+            📡
+          </button>
           <button class="btn btn-ghost btn-sm" onclick="openEditAllocationModal(${a.id})" title="Edit">
             ✏️
           </button>
@@ -405,7 +446,10 @@ function openAllocateModal(ipPrefill = '', isEdit = false, allocationData = null
     elements.allocationIp.disabled = false;
     elements.btnAutofillNextIp.classList.remove('hidden');
     elements.allocationStatus.value = 'active';
-    elements.allocationType.value = 'lxc';
+    elements.allocationType.value = (allocationData && allocationData.device_type) ? allocationData.device_type : 'lxc';
+    if (allocationData && allocationData.mac) {
+      elements.allocationMac.value = allocationData.mac;
+    }
   }
 
   elements.modalAllocation.classList.remove('hidden');
@@ -749,6 +793,255 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+
+// ==========================================================================
+// Ping & ARP Actions
+// ==========================================================================
+
+window.pingSingleIp = async function(ip) {
+  const ipSafe = ip.replace(/\./g, '-');
+  const dot = document.getElementById(`ping-dot-${ipSafe}`);
+  if (dot) {
+    dot.textContent = '🟡';
+    dot.classList.add('pulse');
+    dot.title = `Pinging ${ip}...`;
+  }
+
+  try {
+    const res = await fetch(`/api/network/ping/${encodeURIComponent(ip)}`);
+    const data = await res.json();
+    if (dot) {
+      dot.classList.remove('pulse');
+      if (data.alive) {
+        dot.textContent = '🟢';
+        dot.title = `Online (${data.roundTripMs}ms)${data.mac ? ' [MAC: ' + data.mac + ']' : ''}`;
+        showToast(`Host ${ip} is ONLINE (${data.roundTripMs}ms)`, 'success');
+      } else {
+        dot.textContent = '🔴';
+        dot.title = 'Offline / No response';
+        showToast(`Host ${ip} did not respond to ping`, 'error');
+      }
+    }
+  } catch (err) {
+    if (dot) {
+      dot.classList.remove('pulse');
+      dot.textContent = '⚪';
+    }
+    showToast(`Failed to ping ${ip}: ${err.message}`, 'error');
+  }
+};
+
+window.adoptHost = function(ip, mac) {
+  elements.modalSweep.classList.add('hidden');
+  openAllocateModal(ip, false, { ip, mac: mac || '' });
+  elements.allocationHostname.focus();
+};
+
+// ==========================================================================
+// Import Modal Handling
+// ==========================================================================
+
+let activeImportTab = 'json';
+
+elements.btnImportData.addEventListener('click', () => {
+  elements.importCsvSubnet.innerHTML = '<option value="">Auto-match by IP / CIDR column</option>' +
+    state.subnets.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${s.cidr})</option>`).join('');
+  
+  elements.formImport.reset();
+  elements.importResult.classList.add('hidden');
+  elements.modalImport.classList.remove('hidden');
+});
+
+elements.btnCloseImportModal.addEventListener('click', () => elements.modalImport.classList.add('hidden'));
+elements.btnCancelImport.addEventListener('click', () => elements.modalImport.classList.add('hidden'));
+
+elements.tabBtnJson.addEventListener('click', () => {
+  activeImportTab = 'json';
+  elements.tabBtnJson.classList.add('active');
+  elements.tabBtnCsv.classList.remove('active');
+  elements.tabContentJson.classList.remove('hidden');
+  elements.tabContentCsv.classList.add('hidden');
+});
+
+elements.tabBtnCsv.addEventListener('click', () => {
+  activeImportTab = 'csv';
+  elements.tabBtnCsv.classList.add('active');
+  elements.tabBtnJson.classList.remove('active');
+  elements.tabContentCsv.classList.remove('hidden');
+  elements.tabContentJson.classList.add('hidden');
+});
+
+elements.importJsonFile.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      elements.importJsonText.value = evt.target.result;
+    };
+    reader.readAsText(file);
+  }
+});
+
+elements.importCsvFile.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      elements.importCsvText.value = evt.target.result;
+    };
+    reader.readAsText(file);
+  }
+});
+
+elements.formImport.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  elements.importResult.classList.add('hidden');
+  elements.btnSubmitImport.disabled = true;
+  elements.btnSubmitImport.textContent = 'Importing...';
+
+  try {
+    let payload;
+    if (activeImportTab === 'json') {
+      const text = elements.importJsonText.value.trim();
+      if (!text) throw new Error('Please upload or paste JSON data');
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        throw new Error('Invalid JSON format');
+      }
+      payload = {
+        format: 'json',
+        data: parsed,
+        mode: elements.importJsonMode.value,
+      };
+    } else {
+      const csv = elements.importCsvText.value.trim();
+      if (!csv) throw new Error('Please upload or paste CSV data');
+      payload = {
+        format: 'csv',
+        csv,
+        subnet_id: elements.importCsvSubnet.value || null,
+      };
+    }
+
+    const res = await fetch('/api/network/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      throw new Error(result.error || 'Import failed');
+    }
+
+    const s = result.summary;
+    const msg = `Import complete: ${s.subnetsCreated} subnets created, ${s.subnetsUpdated} updated. ${s.allocationsCreated} allocations created, ${s.allocationsUpdated} updated.${s.errors.length > 0 ? ` (${s.errors.length} warnings)` : ''}`;
+    
+    elements.importResult.textContent = msg;
+    elements.importResult.classList.remove('hidden');
+    showToast(msg, s.errors.length > 0 ? 'warning' : 'success');
+
+    await fetchSubnets();
+    await fetchStats();
+    if (state.currentSubnet) {
+      await loadSubnetDetail(state.currentSubnet.id);
+    }
+  } catch (err) {
+    elements.importResult.textContent = err.message;
+    elements.importResult.classList.remove('hidden');
+  } finally {
+    elements.btnSubmitImport.disabled = false;
+    elements.btnSubmitImport.textContent = 'Start Import';
+  }
+});
+
+// ==========================================================================
+// Ping Sweep Modal Handling
+// ==========================================================================
+
+elements.btnOpenSweep.addEventListener('click', () => {
+  if (!state.currentSubnet) return;
+  elements.sweepTargetBadge.textContent = state.currentSubnet.cidr;
+  elements.sweepSummary.classList.add('hidden');
+  elements.sweepLoading.classList.add('hidden');
+  elements.sweepUnallocatedSection.classList.add('hidden');
+  elements.btnStartSweep.disabled = false;
+  elements.modalSweep.classList.remove('hidden');
+});
+
+elements.btnCloseSweepModal.addEventListener('click', () => elements.modalSweep.classList.add('hidden'));
+elements.btnCloseSweepDone.addEventListener('click', () => elements.modalSweep.classList.add('hidden'));
+
+elements.btnStartSweep.addEventListener('click', async () => {
+  if (!state.currentSubnet) return;
+  const subnetId = state.currentSubnet.id;
+  const mode = elements.sweepMode.value;
+  const concurrency = Number(elements.sweepConcurrency.value) || 25;
+
+  elements.btnStartSweep.disabled = true;
+  elements.sweepLoading.classList.remove('hidden');
+  elements.sweepSummary.classList.add('hidden');
+  elements.sweepUnallocatedSection.classList.add('hidden');
+  elements.sweepStatusDesc.textContent = `Pinging hosts in ${state.currentSubnet.cidr} with ${concurrency} parallel workers...`;
+
+  try {
+    const res = await fetch(`/api/network/sweep/${subnetId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, concurrency }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ping sweep failed');
+
+    elements.sweepStatScanned.textContent = data.scannedCount;
+    elements.sweepStatAlive.textContent = data.aliveCount;
+    elements.sweepStatUnallocated.textContent = data.unallocatedAlive.length;
+    elements.sweepSummary.classList.remove('hidden');
+
+    if (Array.isArray(data.results)) {
+      data.results.forEach(r => {
+        const dot = document.getElementById(`ping-dot-${r.ip.replace(/\./g, '-')}`);
+        if (dot) {
+          if (r.alive) {
+            dot.textContent = '🟢';
+            dot.title = `Online (${r.roundTripMs}ms)${r.mac ? ' [MAC: ' + r.mac + ']' : ''}`;
+          } else {
+            dot.textContent = '🔴';
+            dot.title = 'Offline';
+          }
+        }
+      });
+    }
+
+    if (data.unallocatedAlive.length > 0) {
+      elements.unallocatedCountBadge.textContent = `${data.unallocatedAlive.length} host${data.unallocatedAlive.length === 1 ? '' : 's'}`;
+      elements.sweepUnallocatedTbody.innerHTML = data.unallocatedAlive.map(h => `
+        <tr>
+          <td><span style="font-family: var(--font-mono); font-weight:600;">${escapeHtml(h.ip)}</span></td>
+          <td>${h.roundTripMs ? h.roundTripMs + 'ms' : '<1ms'}</td>
+          <td><span class="mac-cell">${escapeHtml(h.mac || '-')}</span></td>
+          <td class="text-right">
+            <button class="btn btn-primary btn-sm" onclick="adoptHost('${escapeHtml(h.ip)}', '${escapeHtml(h.mac || '')}')">
+              + Add to Subnet
+            </button>
+          </td>
+        </tr>
+      `).join('');
+      elements.sweepUnallocatedSection.classList.remove('hidden');
+    }
+
+    showToast(`Sweep finished: ${data.aliveCount} online hosts detected`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    elements.sweepLoading.classList.add('hidden');
+    elements.btnStartSweep.disabled = false;
+  }
+});
 
 // Initial Boot
 initTheme();
