@@ -205,9 +205,17 @@ input[type="number"] {
 
 .logo-subtitle {
   font-size: 0.75rem;
-  color: var(--text-muted);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+[data-theme="dark"] .logo-subtitle {
+  color: #94a3b8; /* text-slate-400 */
+}
+
+[data-theme="light"] .logo-subtitle {
+  color: #64748b; /* text-slate-500 */
 }
 
 .logo-badge {
