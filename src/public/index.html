@@ -12,15 +12,25 @@
   <header class="app-header">
     <div class="header-left">
       <div class="logo">
-        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-          <line x1="6" y1="6" x2="6.01" y2="6"></line>
-          <line x1="6" y1="18" x2="6.01" y2="18"></line>
-        </svg>
+        <div class="logo-box">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+        </div>
         <div>
-          <span class="logo-title">Nano IPAM</span>
-          <span class="logo-badge">LXC Ready</span>
+          <div class="logo-title-row">
+            <span class="logo-title">Nano IPAM</span>
+            <span class="logo-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              LXC Ready
+            </span>
+          </div>
+          <p class="logo-subtitle">Proxmox & Homelab IP Management</p>
         </div>
       </div>
     </div>
@@ -540,6 +550,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <span class="footer-status-dot"></span>
+        <span>Local In-Memory SQLite &bull; Zero External Tracking</span>
+      </div>
+      <div class="footer-right">
+        <span>IPv4 &bull; CIDR &bull; ICMP Ping &bull; ARP Discovery</span>
+      </div>
+    </div>
+  </footer>
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
