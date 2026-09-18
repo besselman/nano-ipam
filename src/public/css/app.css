@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Nano IPAM Theme - Matched to IP Calculator Design System
    Palette: Tailwind Slate / Indigo / Cyan / Emerald / Amber / Rose
    ========================================================================== */
@@ -325,7 +325,7 @@ input[type="number"] {
   font-size: 0.8125rem;
   font-weight: 500;
   padding: 7px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -340,50 +340,78 @@ input[type="number"] {
   flex-shrink: 0;
 }
 
-/* Primary Button (New Subnet) */
-.btn-primary {
+/* Primary Button (New Subnet / Actions) - Dark style matching calculator */
+[data-theme="dark"] .btn-primary {
+  background-color: #020617;
+  color: #f8fafc;
+  border: 1px solid rgba(99, 102, 241, 0.7);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="dark"] .btn-primary .btn-icon,
+[data-theme="dark"] .btn-primary svg {
+  color: #818cf8;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background-color: #1e1b4b;
+  border-color: #818cf8;
+  color: #ffffff;
+  box-shadow: 0 4px 12px 0 rgba(99, 102, 241, 0.25);
+}
+
+[data-theme="light"] .btn-primary {
   background-color: #4f46e5;
   color: #ffffff;
-  border: 1px solid rgba(79, 70, 229, 0.4);
+  border: 1px solid #4338ca;
   box-shadow: 0 1px 2px 0 rgba(79, 70, 229, 0.25);
 }
 
-.btn-primary:hover {
+[data-theme="light"] .btn-primary:hover {
   background-color: #4338ca;
-  box-shadow: 0 4px 10px 0 rgba(79, 70, 229, 0.35);
 }
 
-/* Secondary Button (Export, Import) */
+/* Secondary Button (Export, Import, Details Actions) - Dark style matching calculator */
 [data-theme="dark"] .btn-secondary {
-  background-color: #1e293b;
-  border: 1px solid rgba(51, 65, 85, 0.8);
-  color: #cbd5e1;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  background-color: #020617;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  color: #f1f5f9;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .btn-secondary .btn-icon,
+[data-theme="dark"] .btn-secondary svg {
+  color: #94a3b8;
 }
 
 [data-theme="dark"] .btn-secondary:hover {
-  background-color: #334155;
-  color: #ffffff;
+  background-color: #1e293b;
   border-color: #475569;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .btn-secondary:hover .btn-icon,
+[data-theme="dark"] .btn-secondary:hover svg {
+  color: #ffffff;
 }
 
 [data-theme="light"] .btn-secondary {
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
   border: 1px solid #cbd5e1;
-  color: #334155;
+  color: #1e293b;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 [data-theme="light"] .btn-secondary:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
+  background-color: #f1f5f9;
   border-color: #94a3b8;
+  color: #0f172a;
 }
 
 .btn-success {
   background-color: var(--color-success);
   color: #ffffff;
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 1px 2px 0 rgba(16, 185, 129, 0.3);
 }
 
@@ -418,27 +446,34 @@ input[type="number"] {
 
 /* Theme Toggle Button (Exact IP Calculator match) */
 .icon-btn.theme-toggle {
-  width: 36px;
-  height: 36px;
-  padding: 8px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-theme="dark"] .icon-btn.theme-toggle {
-  background-color: #1e293b;
+  background-color: #020617;
   border: 1px solid rgba(51, 65, 85, 0.6);
-  color: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
 }
 
 [data-theme="dark"] .icon-btn.theme-toggle:hover {
-  background-color: #334155;
-  color: #ffffff;
+  background-color: #1e293b;
+  border-color: #475569;
+  color: #f8fafc;
 }
 
 [data-theme="dark"] .theme-toggle .sun-icon {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: #fbbf24;
 }
 
@@ -447,13 +482,15 @@ input[type="number"] {
 }
 
 [data-theme="light"] .icon-btn.theme-toggle {
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #334155;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 [data-theme="light"] .icon-btn.theme-toggle:hover {
-  background-color: #e2e8f0;
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
   color: #0f172a;
 }
 
@@ -463,8 +500,8 @@ input[type="number"] {
 
 [data-theme="light"] .theme-toggle .moon-icon {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: #4f46e5;
 }
 
@@ -1322,3 +1359,75 @@ input[type="number"] {
 .toast.toast-success { border-left: 4px solid var(--color-success); }
 .toast.toast-error { border-left: 4px solid var(--color-danger); }
 .toast.toast-info { border-left: 4px solid var(--accent-primary); }
+
+/* ==========================================================================
+   Footer (Matching IP Calculator Darker Styling)
+   ========================================================================== */
+
+.app-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 24px 0;
+  font-size: 0.75rem;
+  margin-top: auto;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+[data-theme="dark"] .app-footer {
+  background-color: rgba(2, 6, 23, 0.75);
+  border-top: 1px solid rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+}
+
+[data-theme="light"] .app-footer {
+  background-color: rgba(255, 255, 255, 0.7);
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.footer-container {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.footer-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  display: inline-block;
+  animation: pulse-emerald 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+@keyframes pulse-emerald {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}

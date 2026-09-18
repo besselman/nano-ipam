@@ -1,7 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Rounded Indigo Badge matching Calculator -->
   <rect width="32" height="32" rx="8" fill="#4F46E5"/>
-  <circle cx="9" cy="9" r="3" fill="#38BDF8"/>
-  <circle cx="23" cy="9" r="3" fill="#38BDF8"/>
-  <circle cx="16" cy="23" r="3" fill="#38BDF8"/>
-  <path d="M9 12v4a3 3 0 0 0 3 3h4m7-7v4a3 3 0 0 1-3 3h-4m0 0v1" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Server / Router Appliance (Top) -->
+  <rect x="6" y="5.5" width="20" height="8" rx="2" stroke="#FFFFFF" stroke-width="1.8"/>
+  <!-- Status Indicator LED -->
+  <circle cx="9.5" cy="9.5" r="1.3" fill="#38BDF8"/>
+  <!-- Console / Drive Vents -->
+  <line x1="13.5" y1="9.5" x2="18" y2="9.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="20.5" y1="9.5" x2="22.5" y2="9.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- Central Distribution Trunk -->
+  <path d="M16 13.5v5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  
+  <!-- Subnet IP Distribution Bus -->
+  <path d="M8.5 18.5h15" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  
+  <!-- Drops to 3 IP Endpoints -->
+  <path d="M8.5 18.5v3.5" stroke="#FFFFFF" stroke-width="1.8"/>
+  <path d="M16 18.5v3.5" stroke="#FFFFFF" stroke-width="1.8"/>
+  <path d="M23.5 18.5v3.5" stroke="#FFFFFF" stroke-width="1.8"/>
+  
+  <!-- 3 Allocated IP Nodes / Host Addresses -->
+  <circle cx="8.5" cy="24.5" r="2.5" fill="#38BDF8"/>
+  <circle cx="16" cy="24.5" r="2.5" fill="#38BDF8"/>
+  <circle cx="23.5" cy="24.5" r="2.5" fill="#38BDF8"/>
 </svg>
