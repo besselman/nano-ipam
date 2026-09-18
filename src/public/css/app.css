@@ -315,55 +315,76 @@ input[type="number"] {
 }
 
 /* ==========================================================================
-   Buttons & Controls
+   Buttons & Controls (Matching IP Calculator Styling)
    ========================================================================== */
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.875rem;
+  gap: 6px;
+  font-size: 0.8125rem;
   font-weight: 500;
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
+  padding: 7px 14px;
+  border-radius: 12px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   text-decoration: none;
+  line-height: 1.25rem;
 }
 
-.btn svg {
-  width: 16px;
-  height: 16px;
+.btn svg, .btn-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 
+/* Primary Button (New Subnet) */
 .btn-primary {
-  background-color: var(--accent-primary);
+  background-color: #4f46e5;
   color: #ffffff;
-  box-shadow: 0 1px 3px 0 rgba(79, 70, 229, 0.3);
+  border: 1px solid rgba(79, 70, 229, 0.4);
+  box-shadow: 0 1px 2px 0 rgba(79, 70, 229, 0.25);
 }
 
 .btn-primary:hover {
-  background-color: var(--accent-primary-hover);
-  box-shadow: 0 3px 8px 0 rgba(79, 70, 229, 0.4);
+  background-color: #4338ca;
+  box-shadow: 0 4px 10px 0 rgba(79, 70, 229, 0.35);
 }
 
-.btn-secondary {
-  background-color: var(--bg-surface-elevated);
-  border-color: var(--border-input);
-  color: var(--text-primary);
+/* Secondary Button (Export, Import) */
+[data-theme="dark"] .btn-secondary {
+  background-color: #1e293b;
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  color: #cbd5e1;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
 }
 
-.btn-secondary:hover {
-  background-color: var(--bg-surface-hover);
-  border-color: var(--text-muted);
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: #334155;
+  color: #ffffff;
+  border-color: #475569;
+}
+
+[data-theme="light"] .btn-secondary {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .btn-secondary:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+  border-color: #94a3b8;
 }
 
 .btn-success {
   background-color: var(--color-success);
   color: #ffffff;
-  box-shadow: 0 1px 3px 0 rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px 0 rgba(16, 185, 129, 0.3);
 }
 
 .btn-success:hover {
@@ -373,6 +394,7 @@ input[type="number"] {
 .btn-ghost {
   background-color: transparent;
   color: var(--text-secondary);
+  border-radius: 8px;
 }
 
 .btn-ghost:hover {
@@ -382,34 +404,69 @@ input[type="number"] {
 
 .btn-sm {
   padding: 4px 10px;
-  font-size: 0.8rem;
-  border-radius: var(--radius-sm);
+  font-size: 0.775rem;
+  border-radius: 8px;
 }
 
 .icon-btn {
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-md);
-  width: 38px;
-  height: 38px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-secondary);
   transition: all 0.15s ease;
 }
 
-.icon-btn:hover {
-  background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
+/* Theme Toggle Button (Exact IP Calculator match) */
+.icon-btn.theme-toggle {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 8px;
 }
 
-.theme-toggle .sun-icon { display: none; color: #f59e0b; }
-.theme-toggle .moon-icon { display: block; color: #6366f1; }
+[data-theme="dark"] .icon-btn.theme-toggle {
+  background-color: #1e293b;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  color: #cbd5e1;
+}
 
-[data-theme="light"] .theme-toggle .sun-icon { display: block; }
-[data-theme="light"] .theme-toggle .moon-icon { display: none; }
+[data-theme="dark"] .icon-btn.theme-toggle:hover {
+  background-color: #334155;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .theme-toggle .sun-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .theme-toggle .moon-icon {
+  display: none;
+}
+
+[data-theme="light"] .icon-btn.theme-toggle {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+[data-theme="light"] .icon-btn.theme-toggle:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+[data-theme="light"] .theme-toggle .sun-icon {
+  display: none;
+}
+
+[data-theme="light"] .theme-toggle .moon-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: #4f46e5;
+}
 
 /* ==========================================================================
    Layout & Grid
