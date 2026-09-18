@@ -1375,13 +1375,15 @@ input[type="number"] {
 .app-footer {
   border-top: 1px solid var(--border-color);
   padding: 24px 0;
+  font-family: var(--font-sans);
   font-size: 0.75rem;
+  line-height: 1rem;
   margin-top: auto;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 [data-theme="dark"] .app-footer {
-  background-color: rgba(2, 6, 23, 0.75);
+  background-color: rgba(2, 6, 23, 0.6);
   border-top: 1px solid rgba(30, 41, 59, 0.8);
   color: #94a3b8;
 }
@@ -1407,6 +1409,9 @@ input[type="number"] {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.footer-primary-text {
   font-weight: 500;
 }
 
@@ -1435,7 +1440,24 @@ input[type="number"] {
   display: flex;
   align-items: center;
   gap: 16px;
+  font-size: 0.75rem;
+}
+
+.footer-mono-tags {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.footer-bullet {
+  opacity: 0.6;
+}
+
+[data-theme="dark"] .footer-mono-tags,
+[data-theme="dark"] .footer-right span {
+  color: #94a3b8;
+}
+
+[data-theme="light"] .footer-mono-tags,
+[data-theme="light"] .footer-right span {
+  color: #64748b;
 }
